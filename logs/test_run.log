@@ -1,0 +1,42 @@
+==========================================
+Flask Security Audit - Test Suite
+Started: 2025/11/25 周二 14:00:43.10
+Platform: Windows
+==========================================
+
+ 
+  PASSED - vulnerable code found 
+ 
+  PASSED - vulnerable code found 
+ 
+  PASSED - vulnerable code found 
+ 
+  PASSED - hardcoded key found 
+ 
+  PASSED - input_fixed.py found 
+ 
+  PASSED - parameterized queries found 
+ 
+  PASSED - JSON used 
+ 
+  PASSED - subprocess used 
+ 
+  PASSED - API key from environment 
+ 
+  PASSED - password hashing found 
+ 
+  PASSED - report.json found 
+ 
+
+==========================================
+Test Summary
+==========================================
+Passed: 11
+Failed: 0
+Total:  11 + 0
+
+Status: ALL TESTS PASSED
+
+Log file: D:\projects\v-JianzhangDong_25_11_25\logs\test_run.log
+Completed: 2025/11/25 周二 14:00:43.41
+==========================================

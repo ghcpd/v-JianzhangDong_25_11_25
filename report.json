@@ -1,0 +1,219 @@
+{
+  "audit_report": {
+    "application": "Flask Application Security Audit",
+    "audit_date": "2025-11-25",
+    "status": "VULNERABILITIES FOUND",
+    "summary": {
+      "total_vulnerabilities": 8,
+      "critical": 3,
+      "high": 3,
+      "medium": 2
+    }
+  },
+  "vulnerabilities": [
+    {
+      "id": "VULN-001",
+      "severity": "CRITICAL",
+      "type": "Hardcoded Secrets",
+      "title": "Hardcoded API Key",
+      "description": "API key is hardcoded in the source code, exposing sensitive credentials to anyone with code access.",
+      "affected_file": "input.py",
+      "line_numbers": [10],
+      "code_snippet": "API_KEY = \"AKIA_EXAMPLE_HARDCODED_KEY_123456\"",
+      "risk": "Credential exposure, unauthorized API access, potential account compromise",
+      "fix": {
+        "description": "Move API key to environment variables using .env file and python-dotenv",
+        "code_before": "API_KEY = \"AKIA_EXAMPLE_HARDCODED_KEY_123456\"",
+        "code_after": "API_KEY = os.getenv('API_KEY', 'default_insecure_key')",
+        "implementation_details": "Use python-dotenv to load environment variables from .env file at runtime"
+      },
+      "cwe": "CWE-798: Use of Hard-Coded Credentials"
+    },
+    {
+      "id": "VULN-002",
+      "severity": "CRITICAL",
+      "type": "SQL Injection",
+      "title": "SQL Injection via String Formatting",
+      "description": "User input is directly concatenated into SQL query using .format(), allowing SQL injection attacks.",
+      "affected_file": "input.py",
+      "line_numbers": [14, 15, 16],
+      "code_snippet": "sql = \"SELECT id, username FROM users WHERE username LIKE '%{}%'\".format(name)\ncur.execute(sql)",
+      "risk": "Database compromise, unauthorized data access, data manipulation or deletion",
+      "fix": {
+        "description": "Use parameterized queries (prepared statements) with placeholders",
+        "code_before": "sql = \"SELECT id, username FROM users WHERE username LIKE '%{}%'\".format(name)\ncur.execute(sql)",
+        "code_after": "sql = \"SELECT id, username FROM users WHERE username LIKE ?\"\ncur.execute(sql, (f'%{name}%',))",
+        "implementation_details": "Replace .format() with parameterized query placeholders. SQLite uses '?' for placeholders."
+      },
+      "cwe": "CWE-89: Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')"
+    },
+    {
+      "id": "VULN-003",
+      "severity": "CRITICAL",
+      "type": "Insecure Deserialization",
+      "title": "Unsafe Pickle Deserialization (Remote Code Execution)",
+      "description": "User-supplied data is deserialized using pickle.loads(), which can execute arbitrary code.",
+      "affected_file": "input.py",
+      "line_numbers": [20, 21, 22, 23, 24, 25],
+      "code_snippet": "data = request.data\nprofile = pickle.loads(data)",
+      "risk": "Remote Code Execution (RCE), complete system compromise, arbitrary command execution",
+      "fix": {
+        "description": "Replace pickle with JSON deserialization and implement input validation",
+        "code_before": "data = request.data\nprofile = pickle.loads(data)\nreturn jsonify({\"status\": \"ok\", \"name\": profile.get(\"name\")})",
+        "code_after": "data = request.get_json()\nif not isinstance(data, dict):\n    return jsonify({\"error\": \"Invalid request\"}), 400\nname = data.get(\"name\", \"\")\nif not isinstance(name, str) or len(name) > 255:\n    return jsonify({\"error\": \"Invalid name\"}), 400\nsafe_name = escape(name)",
+        "implementation_details": "Use JSON format which is safe by design. Validate data types and lengths."
+      },
+      "cwe": "CWE-502: Deserialization of Untrusted Data"
+    },
+    {
+      "id": "VULN-004",
+      "severity": "CRITICAL",
+      "type": "Command Injection",
+      "title": "Command Injection via os.system()",
+      "description": "User input is directly concatenated into shell commands using os.system(), allowing command injection.",
+      "affected_file": "input.py",
+      "line_numbers": [28, 29, 30, 31, 32, 33],
+      "code_snippet": "cmd = request.form.get('cmd', '')\nos.system(\"echo Running: \" + cmd)",
+      "risk": "Remote Code Execution, arbitrary command execution, system compromise",
+      "fix": {
+        "description": "Use subprocess.run with shell=False and command whitelisting",
+        "code_before": "os.system(\"echo Running: \" + cmd)",
+        "code_after": "allowed_commands = ['echo', 'date', 'whoami']\ncmd_parts = cmd.strip().split()\nif not cmd_parts or cmd_parts[0] not in allowed_commands:\n    return jsonify({\"error\": \"Command not allowed\"}), 403\nsubprocess.run(cmd_parts, capture_output=True, text=True, timeout=5)",
+        "implementation_details": "Use subprocess.run with shell=False to prevent injection. Whitelist allowed commands."
+      },
+      "cwe": "CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"
+    },
+    {
+      "id": "VULN-005",
+      "severity": "HIGH",
+      "type": "Template Injection",
+      "title": "Server-Side Template Injection (SSTI)",
+      "description": "User input is directly inserted into template strings passed to render_template_string().",
+      "affected_file": "input.py",
+      "line_numbers": [36, 37, 38, 39, 40, 41],
+      "code_snippet": "name = request.args.get('name', 'guest')\ntemplate = \"<h1>Hello %s</h1>\" % name\nreturn render_template_string(template)",
+      "risk": "Template Injection attacks, potential code execution via Jinja2 expressions",
+      "fix": {
+        "description": "Avoid render_template_string with user input. Use proper templating or JSON responses.",
+        "code_before": "template = \"<h1>Hello %s</h1>\" % name\nreturn render_template_string(template)",
+        "code_after": "safe_name = escape(name)\nreturn jsonify({\"greeting\": f\"Hello {safe_name}\"})",
+        "implementation_details": "Use escape() from Werkzeug or return JSON. Never use user input in template strings."
+      },
+      "cwe": "CWE-1336: Improper Neutralization of Special Elements used in a Templating Engine"
+    },
+    {
+      "id": "VULN-006",
+      "severity": "HIGH",
+      "type": "Hardcoded Credentials",
+      "title": "Hardcoded Plain Text Passwords",
+      "description": "User passwords are stored as plain text in the USERS dictionary, visible in source code.",
+      "affected_file": "input.py",
+      "line_numbers": [45, 46],
+      "code_snippet": "USERS = {\n    \"alice\": {\"password\": \"password123\"},\n}",
+      "risk": "Credential exposure, unauthorized account access, password compromise",
+      "fix": {
+        "description": "Use password hashing with werkzeug.security.generate_password_hash()",
+        "code_before": "USERS = {\n    \"alice\": {\"password\": \"password123\"},\n}",
+        "code_after": "from werkzeug.security import generate_password_hash, check_password_hash\nUSERS = {\n    \"alice\": {\"password_hash\": generate_password_hash(\"password123\")},\n}",
+        "implementation_details": "Use bcrypt or PBKDF2-based hashing. Store only hashes, never plain text passwords."
+      },
+      "cwe": "CWE-256: Plaintext Storage of a Password"
+    },
+    {
+      "id": "VULN-007",
+      "severity": "HIGH",
+      "type": "Weak Authentication",
+      "title": "Plain Text Password Comparison",
+      "description": "Authentication uses direct string comparison without timing attack protection or proper hashing.",
+      "affected_file": "input.py",
+      "line_numbers": [50, 51, 52, 53, 54, 55],
+      "code_snippet": "if user and user.get(\"password\") == password:\n    return \"login ok\"\nreturn \"login failed\"",
+      "risk": "Timing attacks, weak password verification, no session management",
+      "fix": {
+        "description": "Use werkzeug.security.check_password_hash() for constant-time comparison",
+        "code_before": "if user and user.get(\"password\") == password:\n    return \"login ok\"",
+        "code_after": "if user and check_password_hash(user.get(\"password_hash\"), password):\n    logger.info(f\"Successful login for user: {username}\")\n    return jsonify({\"status\": \"login ok\"}), 200",
+        "implementation_details": "Use check_password_hash() which performs constant-time comparison. Add logging for security events."
+      },
+      "cwe": "CWE-208: Observable Timing Discrepancy"
+    },
+    {
+      "id": "VULN-008",
+      "severity": "MEDIUM",
+      "type": "Insecure Configuration",
+      "title": "Debug Mode Enabled in Production",
+      "description": "Flask debug mode is hardcoded to True, exposing sensitive information and enabling code execution.",
+      "affected_file": "input.py",
+      "line_numbers": [59],
+      "code_snippet": "app.run(debug=True)",
+      "risk": "Information disclosure, error stack traces leaking sensitive data, interactive debugger access",
+      "fix": {
+        "description": "Load debug mode from environment variables, default to False",
+        "code_before": "app.run(debug=True)",
+        "code_after": "debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'\napp.run(debug=debug_mode, host='127.0.0.1')",
+        "implementation_details": "Always default to False. Only enable in development environment via environment variable."
+      },
+      "cwe": "CWE-215: Information Exposure Through Debug Information"
+    },
+    {
+      "id": "VULN-009",
+      "severity": "MEDIUM",
+      "type": "Missing Security Headers",
+      "title": "Lack of Error Handling and Logging",
+      "description": "No structured error handling, logging, or input validation throughout the application.",
+      "affected_file": "input.py",
+      "line_numbers": [1, 59],
+      "code_snippet": "No error handlers or logging setup",
+      "risk": "Information disclosure via error messages, inability to detect attacks, poor incident response",
+      "fix": {
+        "description": "Implement comprehensive logging and error handling",
+        "code_before": "# No logging or structured error handling",
+        "code_after": "import logging\nlogging.basicConfig(level=logging.INFO)\nlogger = logging.getLogger(__name__)\n\n@app.errorhandler(404)\ndef not_found(error):\n    return jsonify({\"error\": \"Not found\"}), 404\n\n@app.errorhandler(500)\ndef internal_error(error):\n    logger.error(f\"Internal server error: {str(error)}\")\n    return jsonify({\"error\": \"Internal server error\"}), 500",
+        "implementation_details": "Add logging for security events and errors. Implement proper error handlers that don't leak sensitive information."
+      },
+      "cwe": "CWE-532: Insertion of Sensitive Information into Log File"
+    }
+  ],
+  "recommendations": {
+    "immediate_actions": [
+      "Replace all hardcoded credentials with environment variables",
+      "Fix all SQL injection vulnerabilities by using parameterized queries",
+      "Remove pickle deserialization and replace with JSON",
+      "Replace os.system() with subprocess.run(shell=False)",
+      "Implement password hashing for all stored credentials",
+      "Disable debug mode in production"
+    ],
+    "security_best_practices": [
+      "Use environment variables for all sensitive configuration",
+      "Implement input validation and sanitization for all user inputs",
+      "Use parameterized queries for all database operations",
+      "Never trust user input - escape/validate everything",
+      "Implement comprehensive logging and monitoring",
+      "Use HTTPS in production",
+      "Implement rate limiting for authentication endpoints",
+      "Add security headers (CSP, X-Frame-Options, etc.)",
+      "Implement proper session management",
+      "Regular security audits and penetration testing"
+    ],
+    "dependencies": [
+      "flask>=2.3.0",
+      "python-dotenv>=1.0.0",
+      "werkzeug>=2.3.0 (included with Flask)"
+    ]
+  },
+  "testing_strategy": {
+    "vulnerable_version_tests": [
+      "SQL injection: test with input like: ' OR '1'='1",
+      "Command injection: test with input like: '; rm -rf /'",
+      "Template injection: test with input like: {{ 7*7 }}",
+      "Pickle injection: test with malicious serialized object"
+    ],
+    "fixed_version_tests": [
+      "All injection tests should fail safely",
+      "Parameterized queries should prevent SQL injection",
+      "Command whitelisting should block unauthorized commands",
+      "JSON deserialization should reject invalid data",
+      "Password hashing should work correctly"
+    ]
+  }
+}
