@@ -1,0 +1,58 @@
+2025-11-25 16:25:48,524 - INFO - Test execution started at 2025-11-25 16:25:48.523351
+2025-11-25 16:25:48,524 - INFO - ==================================================
+2025-11-25 16:25:48,524 - INFO - Flask Security Audit - Test Suite
+2025-11-25 16:25:48,524 - INFO - ==================================================
+2025-11-25 16:25:48,570 - INFO - Detected Platform: Windows
+2025-11-25 16:25:48,570 - INFO - Python Version: 3.11.9
+2025-11-25 16:25:48,571 - INFO - Docker Environment: False
+2025-11-25 16:25:48,571 - INFO - 
+2025-11-25 16:25:48,571 - INFO - Test 1: Hardcoded API Key Detection
+2025-11-25 16:25:48,620 - INFO - Test 2: SQL Injection Prevention
+2025-11-25 16:25:48,622 - INFO - Test 3: Pickle Deserialization Check
+2025-11-25 16:25:48,628 - INFO - Test 4: Command Injection Prevention
+2025-11-25 16:25:48,634 - INFO - Test 5: Template Injection Prevention
+2025-11-25 16:25:48,638 - INFO - Test 6: Hardcoded Credentials Check
+2025-11-25 16:25:48,641 - INFO - Test 7: Weak Password Comparison Check
+2025-11-25 16:25:48,646 - INFO - Test 8: Debug Mode Check
+2025-11-25 16:25:48,651 - INFO - Test 9: Python Syntax Validation
+2025-11-25 16:25:48,675 - INFO - Test 10: Import Validation
+2025-11-25 16:25:48,688 - INFO - 
+2025-11-25 16:25:48,688 - INFO - ==================================================
+2025-11-25 16:25:48,690 - INFO - Test Results: 9 passed, 1 failed
+2025-11-25 16:25:48,690 - INFO - ==================================================
+2025-11-25 16:25:48,692 - INFO - Test results saved to: logs\test_run.log
+2025-11-25 16:25:48,692 - INFO - Summary saved to: logs\test_results.json
+2025-11-25 16:27:09,313 - INFO - Test execution started at 2025-11-25 16:27:09.313792
+2025-11-25 16:27:09,314 - INFO - ============================================================
+2025-11-25 16:27:09,314 - INFO - Flask Security Audit - Test Suite
+2025-11-25 16:27:09,314 - INFO - ============================================================
+2025-11-25 16:27:09,349 - INFO - Detected Platform: Windows
+2025-11-25 16:27:09,349 - INFO - Python Version: 3.11.9
+2025-11-25 16:27:09,349 - INFO - Docker Environment: False
+2025-11-25 16:27:09,349 - INFO - 
+2025-11-25 16:27:09,349 - INFO - Test 1: Hardcoded API Key Detection
+2025-11-25 16:27:09,349 - INFO -   [PASS] API key loaded from environment variable
+2025-11-25 16:27:09,349 - INFO - Test 2: SQL Injection Prevention
+2025-11-25 16:27:09,349 - INFO -   [PASS] Parameterized queries implemented
+2025-11-25 16:27:09,349 - INFO - Test 3: Pickle Deserialization Check
+2025-11-25 16:27:09,358 - INFO -   [PASS] JSON parsing implemented (safe)
+2025-11-25 16:27:09,358 - INFO - Test 4: Command Injection Prevention
+2025-11-25 16:27:09,360 - INFO -   [PASS] Safe subprocess.run() implementation
+2025-11-25 16:27:09,360 - INFO - Test 5: Template Injection Prevention
+2025-11-25 16:27:09,361 - INFO -   [PASS] HTML escaping implemented
+2025-11-25 16:27:09,361 - INFO - Test 6: Hardcoded Credentials Check
+2025-11-25 16:27:09,364 - INFO -   [PASS] Password hashing implemented
+2025-11-25 16:27:09,364 - INFO - Test 7: Weak Password Comparison Check
+2025-11-25 16:27:09,365 - INFO -   [PASS] Proper password hash verification
+2025-11-25 16:27:09,365 - INFO - Test 8: Debug Mode Check
+2025-11-25 16:27:09,366 - INFO -   [PASS] Debug mode controlled by environment variable
+2025-11-25 16:27:09,366 - INFO - Test 9: Python Syntax Validation
+2025-11-25 16:27:09,380 - INFO -   [PASS] Python syntax is valid
+2025-11-25 16:27:09,380 - INFO - Test 10: Import Validation
+2025-11-25 16:27:09,388 - INFO -   [PASS] 9 imports found and valid
+2025-11-25 16:27:09,388 - INFO - 
+2025-11-25 16:27:09,388 - INFO - ============================================================
+2025-11-25 16:27:09,389 - INFO - Test Results: 10 PASSED, 0 FAILED
+2025-11-25 16:27:09,389 - INFO - ============================================================
+2025-11-25 16:27:09,390 - INFO - Test results saved to: logs\test_run.log
+2025-11-25 16:27:09,390 - INFO - Summary saved to: logs\test_results.json
