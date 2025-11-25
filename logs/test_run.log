@@ -1,0 +1,116 @@
+============================================================
+Automatic Security Test Execution
+============================================================
+Start Time: 2025-11-25 16:27:53
+
+============================================================
+Environment Detection
+============================================================
+Operating System: Windows
+Platform: Windows-10-10.0.26200-SP0
+Python Version: 3.11.9
+Environment: Windows
+
+
+============================================================
+Running Comparative Security Tests
+============================================================
+
+Phase 1: Testing VULNERABLE version (input_vulnerable.py)
+------------------------------------------------------------
+============================================================
+Running Security Tests on: input_vulnerable.py
+============================================================
+
+================================
+Security Audit - Test Execution
+================================
+
+Testing file: input_vulnerable.py
+
+Testing for hardcoded secrets...
+[VULNERABLE] Hardcoded API key found in source code
+
+Testing SQL Injection vulnerability...
+[VULNERABLE] SQL Injection vulnerability found - string formatting in SQL query
+
+Testing insecure deserialization (pickle)...
+[VULNERABLE] Insecure pickle.loads() found - RCE possible
+
+Testing command injection vulnerability...
+[VULNERABLE] os.system() with user input found - command injection possible
+
+Testing Server-Side Template Injection...
+[VULNERABLE] render_template_string with user input - SSTI possible
+
+Testing for weak/plaintext passwords...
+[VULNERABLE] Plaintext passwords found in source code
+
+Testing debug mode configuration...
+[VULNERABLE] Debug mode is hardcoded to True
+
+================================
+Test Results
+================================
+Found 7 security vulnerabilities
+The application is NOT secure
+
+✓ EXPECTED: Vulnerable version failed security tests
+
+
+Phase 2: Testing SECURE version (input.py)
+------------------------------------------------------------
+============================================================
+Running Security Tests on: input.py
+============================================================
+
+================================
+Security Audit - Test Execution
+================================
+
+Testing file: input.py
+
+Testing for hardcoded secrets...
+[SECURE] No hardcoded API keys found
+
+Testing SQL Injection vulnerability...
+[SECURE] SQL Injection prevented with parameterized queries
+
+Testing insecure deserialization (pickle)...
+[SECURE] No insecure deserialization found
+
+Testing command injection vulnerability...
+[SECURE] No command injection vulnerabilities found
+
+Testing Server-Side Template Injection...
+[SECURE] No SSTI vulnerabilities found
+
+Testing for weak/plaintext passwords...
+[SECURE] Passwords are properly hashed
+
+Testing debug mode configuration...
+[SECURE] Debug mode is properly configured
+
+================================
+Test Results
+================================
+All security tests PASSED
+The application is secure
+
+✓ SUCCESS: Secure version passed all security tests
+
+Test results saved to: logs\test_results.json
+
+============================================================
+Test Execution Summary
+============================================================
+Total test runs: 2
+Passed: 1
+Failed: 1
+
+✓ Overall Status: SUCCESS
+The vulnerable code correctly fails tests,
+and the secure code passes all tests.
+
+Logs saved to: logs\test_run.log
+============================================================

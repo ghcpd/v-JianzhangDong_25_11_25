@@ -1,0 +1,145 @@
+{
+  "audit_summary": {
+    "file_audited": "input.py",
+    "audit_date": "2025-11-25",
+    "total_vulnerabilities": 7,
+    "critical_count": 4,
+    "high_count": 2,
+    "medium_count": 1
+  },
+  "vulnerabilities": [
+    {
+      "id": 1,
+      "type": "Hardcoded Secret / API Key Exposure",
+      "severity": "CRITICAL",
+      "cwe": "CWE-798",
+      "file": "input.py",
+      "line_numbers": [9],
+      "vulnerable_code": "API_KEY = \"AKIA_EXAMPLE_HARDCODED_KEY_123456\"",
+      "description": "AWS API key is hardcoded in the source code. This exposes sensitive credentials that can be extracted from the codebase by anyone with access to the repository.",
+      "impact": "Unauthorized access to AWS resources, potential data breaches, financial loss, and credential compromise.",
+      "fix_explanation": "Remove hardcoded API key and use environment variables instead. Load the API_KEY from os.environ with proper error handling. Store actual keys in .env files (never committed to version control) or use a secrets manager like AWS Secrets Manager, HashiCorp Vault, or Azure Key Vault.",
+      "secure_replacement": "API_KEY = os.environ.get('API_KEY', '')\nif not API_KEY:\n    raise ValueError('API_KEY environment variable must be set')"
+    },
+    {
+      "id": 2,
+      "type": "SQL Injection",
+      "severity": "CRITICAL",
+      "cwe": "CWE-89",
+      "file": "input.py",
+      "line_numbers": [12, 13, 14, 15],
+      "vulnerable_code": "sql = \"SELECT id, username FROM users WHERE username LIKE '%{}%'\".format(name)\ncur.execute(sql)",
+      "description": "User input is directly concatenated into SQL query using string formatting, allowing attackers to inject malicious SQL code. An attacker could use input like \"' OR '1'='1\" to bypass filters or extract sensitive data.",
+      "impact": "Complete database compromise, unauthorized data access, data manipulation, data deletion, and potential system takeover.",
+      "fix_explanation": "Use parameterized queries (prepared statements) which separate SQL code from data. SQLite's parameter substitution with '?' placeholders ensures user input is treated as data, not executable code. This completely prevents SQL injection attacks.",
+      "secure_replacement": "sql = \"SELECT id, username FROM users WHERE username LIKE ?\"\ncur.execute(sql, (f'%{name}%',))"
+    },
+    {
+      "id": 3,
+      "type": "Insecure Deserialization (Pickle)",
+      "severity": "CRITICAL",
+      "cwe": "CWE-502",
+      "file": "input.py",
+      "line_numbers": [21, 22, 23, 24, 25],
+      "vulnerable_code": "data = request.data\nprofile = pickle.loads(data)",
+      "description": "The application uses pickle.loads() to deserialize untrusted user input. Pickle can execute arbitrary code during deserialization, allowing remote code execution (RCE). An attacker can craft malicious pickle data to execute system commands.",
+      "impact": "Remote code execution, complete server compromise, data theft, malware installation, and lateral movement within the network.",
+      "fix_explanation": "Replace pickle with JSON for data serialization. JSON only handles data structures (no code execution). Implement strict input validation to ensure data conforms to expected schema. Add content-type checking and size limits. Use a schema validation library like jsonschema or pydantic for robust validation.",
+      "secure_replacement": "if request.content_type != 'application/json':\n    return jsonify({\"error\": \"Content-Type must be application/json\"}), 400\ntry:\n    profile = request.get_json()\n    if not isinstance(profile, dict) or 'name' not in profile:\n        return jsonify({\"error\": \"Invalid profile format\"}), 400\nexcept Exception as e:\n    return jsonify({\"error\": \"Invalid JSON\"}), 400"
+    },
+    {
+      "id": 4,
+      "type": "Command Injection",
+      "severity": "CRITICAL",
+      "cwe": "CWE-78",
+      "file": "input.py",
+      "line_numbers": [30, 31, 32, 33],
+      "vulnerable_code": "cmd = request.form.get('cmd', '')\nos.system(\"echo Running: \" + cmd)",
+      "description": "User input is concatenated directly into a shell command executed via os.system(). An attacker can inject shell metacharacters (like ; | & $()) to execute arbitrary commands. Example: cmd='; rm -rf /' could delete system files.",
+      "impact": "Complete system compromise, data destruction, malware installation, privilege escalation, and use of the server for attacks on other systems.",
+      "fix_explanation": "Avoid os.system() entirely. If command execution is necessary, use subprocess with shell=False and a whitelist of allowed commands. Validate input against strict patterns. In this case, since the functionality just echoes a message, eliminate the shell execution entirely and return the message safely. Never pass user input to shell commands.",
+      "secure_replacement": "cmd = request.form.get('cmd', '')\n# Validate input - only allow alphanumeric and basic punctuation\nimport re\nif not re.match(r'^[a-zA-Z0-9\\s.,!?-]+$', cmd):\n    return \"Invalid input\", 400\n# Don't execute shell commands - just return the message\nreturn jsonify({\"message\": f\"Running: {cmd}\"})"
+    },
+    {
+      "id": 5,
+      "type": "Server-Side Template Injection (SSTI)",
+      "severity": "CRITICAL",
+      "cwe": "CWE-94",
+      "file": "input.py",
+      "line_numbers": [38, 39, 40, 41],
+      "vulnerable_code": "name = request.args.get('name', 'guest')\ntemplate = \"<h1>Hello %s</h1>\" % name\nreturn render_template_string(template)",
+      "description": "User input is directly embedded into a template string that is then rendered. This allows template injection attacks where attackers can inject Jinja2 template expressions like {{7*7}} or execute Python code via {{config}} or other template features, leading to RCE.",
+      "impact": "Remote code execution, access to application configuration (including secrets), file system access, and complete server compromise.",
+      "fix_explanation": "Never use render_template_string with user input. Use Jinja2's automatic escaping by passing variables separately to the template rather than concatenating them. Use render_template with external template files and pass variables via the context dict, or use Flask's escape() function. Jinja2's autoescaping prevents injection by HTML-encoding special characters.",
+      "secure_replacement": "from flask import escape\nname = request.args.get('name', 'guest')\n# Use escape to prevent HTML/template injection\nreturn f\"<h1>Hello {escape(name)}</h1>\""
+    },
+    {
+      "id": 6,
+      "type": "Weak Password / Hardcoded Credentials",
+      "severity": "HIGH",
+      "cwe": "CWE-259",
+      "file": "input.py",
+      "line_numbers": [44, 45, 46],
+      "vulnerable_code": "USERS = {\n    \"alice\": {\"password\": \"password123\"},\n}",
+      "description": "Passwords are stored in plain text and hardcoded in source code. The password 'password123' is extremely weak and commonly used. Passwords are visible to anyone with access to the code repository.",
+      "impact": "Account compromise, unauthorized access, data breaches, and credential stuffing attacks.",
+      "fix_explanation": "Never store plain text passwords. Use strong cryptographic hashing with salt using libraries like bcrypt, argon2, or PBKDF2. Hash passwords before storage. Use werkzeug.security's generate_password_hash and check_password_hash which use strong algorithms. Enforce password complexity requirements (length, character variety). Store user data in a proper database, not in-memory dictionaries.",
+      "secure_replacement": "from werkzeug.security import generate_password_hash, check_password_hash\n\n# Hashed version of 'SecurePassword123!'\nUSERS = {\n    \"alice\": {\"password_hash\": generate_password_hash(\"SecurePassword123!\")},\n}\n\n# In login function, use:\nif user and check_password_hash(user.get(\"password_hash\"), password):"
+    },
+    {
+      "id": 7,
+      "type": "Debug Mode Enabled in Production",
+      "severity": "HIGH",
+      "cwe": "CWE-489",
+      "file": "input.py",
+      "line_numbers": [56],
+      "vulnerable_code": "app.run(debug=True)",
+      "description": "Flask debug mode is enabled, which exposes the interactive debugger and detailed error messages. In production, this allows attackers to execute arbitrary Python code through the debug console and reveals sensitive information about the application structure.",
+      "impact": "Information disclosure, remote code execution via debug console, exposure of source code and internal paths, and easier exploitation of other vulnerabilities.",
+      "fix_explanation": "Never run Flask with debug=True in production. Set debug=False or remove the parameter entirely. Use environment variables to control debug mode (only enable in development). Use proper logging instead of relying on debug output. Deploy with production WSGI servers like Gunicorn or uWSGI instead of Flask's development server.",
+      "secure_replacement": "if __name__ == '__main__':\n    # Only enable debug in development environment\n    debug_mode = os.environ.get('FLASK_ENV') == 'development'\n    app.run(debug=debug_mode, host='127.0.0.1')"
+    }
+  ],
+  "additional_security_recommendations": [
+    {
+      "category": "Input Validation",
+      "recommendation": "Implement comprehensive input validation for all user inputs using a validation library. Set maximum length limits, type checking, and format validation."
+    },
+    {
+      "category": "Rate Limiting",
+      "recommendation": "Implement rate limiting on all endpoints, especially authentication endpoints, using Flask-Limiter to prevent brute force attacks."
+    },
+    {
+      "category": "HTTPS/TLS",
+      "recommendation": "Enforce HTTPS in production using Flask-Talisman or reverse proxy configuration. Never transmit sensitive data over unencrypted connections."
+    },
+    {
+      "category": "CORS Policy",
+      "recommendation": "Configure proper CORS headers if API is accessed from browsers. Use Flask-CORS with strict origin restrictions."
+    },
+    {
+      "category": "Session Security",
+      "recommendation": "Implement proper session management with secure session cookies (httpOnly, secure, sameSite flags). Use Flask-Login or Flask-Session for production-grade session handling."
+    },
+    {
+      "category": "Error Handling",
+      "recommendation": "Implement custom error handlers that don't expose sensitive information. Log errors server-side but show generic messages to users."
+    },
+    {
+      "category": "Security Headers",
+      "recommendation": "Add security headers: Content-Security-Policy, X-Content-Type-Options, X-Frame-Options, Strict-Transport-Security using Flask-Talisman."
+    },
+    {
+      "category": "Database Security",
+      "recommendation": "Use connection pooling, implement proper database error handling, apply principle of least privilege for database user permissions."
+    },
+    {
+      "category": "Dependency Management",
+      "recommendation": "Regularly update dependencies, use tools like Safety or Snyk to scan for known vulnerabilities in packages."
+    },
+    {
+      "category": "Logging & Monitoring",
+      "recommendation": "Implement comprehensive logging of security events (failed logins, input validation failures). Use a centralized logging system and set up alerts for suspicious activities."
+    }
+  ]
+}
