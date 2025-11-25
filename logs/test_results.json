@@ -1,0 +1,20 @@
+{
+  "timestamp": "2025-11-25T16:27:53.332003",
+  "system": "Windows",
+  "platform": "Windows-10-10.0.26200-SP0",
+  "python_version": "3.11.9",
+  "tests": [
+    {
+      "file": "input_vulnerable.py",
+      "exit_code": 1,
+      "passed": false,
+      "output": "================================\nSecurity Audit - Test Execution\n================================\n\nTesting file: input_vulnerable.py\n\nTesting for hardcoded secrets...\n[VULNERABLE] Hardcoded API key found in source code\n\nTesting SQL Injection vulnerability...\n[VULNERABLE] SQL Injection vulnerability found - string formatting in SQL query\n\nTesting insecure deserialization (pickle)...\n[VULNERABLE] Insecure pickle.loads() found - RCE possible\n\nTesting command injection vulnerability...\n[VULNERABLE] os.system() with user input found - command injection possible\n\nTesting Server-Side Template Injection...\n[VULNERABLE] render_template_string with user input - SSTI possible\n\nTesting for weak/plaintext passwords...\n[VULNERABLE] Plaintext passwords found in source code\n\nTesting debug mode configuration...\n[VULNERABLE] Debug mode is hardcoded to True\n\n================================\nTest Results\n================================\nFound 7 security vulnerabilities\nThe application is NOT secure\n"
+    },
+    {
+      "file": "input.py",
+      "exit_code": 0,
+      "passed": true,
+      "output": "================================\nSecurity Audit - Test Execution\n================================\n\nTesting file: input.py\n\nTesting for hardcoded secrets...\n[SECURE] No hardcoded API keys found\n\nTesting SQL Injection vulnerability...\n[SECURE] SQL Injection prevented with parameterized queries\n\nTesting insecure deserialization (pickle)...\n[SECURE] No insecure deserialization found\n\nTesting command injection vulnerability...\n[SECURE] No command injection vulnerabilities found\n\nTesting Server-Side Template Injection...\n[SECURE] No SSTI vulnerabilities found\n\nTesting for weak/plaintext passwords...\n[SECURE] Passwords are properly hashed\n\nTesting debug mode configuration...\n[SECURE] Debug mode is properly configured\n\n================================\nTest Results\n================================\nAll security tests PASSED\nThe application is secure\n"
+    }
+  ]
+}
