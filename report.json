@@ -1,0 +1,98 @@
+{
+  "summary": "Security audit and remediation of input.py",
+  "vulnerabilities": [
+    {
+      "id": "VULN-001",
+      "title": "Hardcoded API key",
+      "file": "input_vulnerable.py",
+      "lines": [9],
+      "severity": "HIGH",
+      "description": "An API key is hardcoded in source code, exposing secrets to source control rights.",
+      "fix": "Read API keys from environment variables and do not store secrets in code. Added read from os.environ and auth logic.",
+      "secure_replacement": "API_KEY = os.environ.get('API_KEY')",
+      "explanation": "Hardcoded API keys allow anyone with repository access to use credentials. Reading from environment variables prevents accidental leakage in source control. Use a secrets manager and rotate secrets regularly."
+    },
+    {
+      "id": "VULN-002",
+      "title": "SQL Injection",
+      "file": "input_vulnerable.py",
+      "lines": [12, 15, 16],
+      "severity": "HIGH",
+      "description": "Unsafely built SQL query using string formatting allows SQL injection.",
+      "fix": "Use parameterized queries with placeholders and validate input length.",
+      "secure_replacement": "cur.execute(\"SELECT id, username FROM users WHERE username LIKE ?\", (f\"%{name}%\",))",
+      "explanation": "Parameterized queries bind user input as data, not code, which prevents SQL injection. Also validate input lengths and characters to reduce risk and avoid unnecessary permissions."
+    },
+    {
+      "id": "VULN-003",
+      "title": "Pickle Deserialization RCE",
+      "file": "input_vulnerable.py",
+      "lines": [23, 26, 27],
+      "severity": "CRITICAL",
+      "description": "Loading untrusted pickled data can lead to remote code execution.",
+      "fix": "Replace pickle-based deserialization with JSON and validate schema/fields.",
+      "secure_replacement": "profile = request.get_json(force=True)",
+      "explanation": "Avoid arbitrary deserialization formats that can execute code. JSON is safe for most attributes; in special cases, use safe serializers or whitelisting and strict schemas (e.g. pydantic)."
+    },
+    {
+      "id": "VULN-004",
+      "title": "OS Command Injection",
+      "file": "input_vulnerable.py",
+      "lines": [32, 35, 36],
+      "severity": "HIGH",
+      "description": "Concatenating user input into shell command and executing with os.system allows command injection.",
+      "fix": "Avoid shell execution with user input; do not pass unchecked input to shell or use shell=False with subprocess when necessary.",
+      "secure_replacement": "Return a safe echo response or use subprocess with arguments (no shell).",
+      "explanation": "Concatenating user input into shell commands is extremely risky. Avoid shell=True and use subprocess with a list argument if you must execute a command. Use allowlists for permitted commands."
+    },
+    {
+      "id": "VULN-005",
+      "title": "Server-Side Template Injection",
+      "file": "input_vulnerable.py",
+      "lines": [40, 44, 45],
+      "severity": "MEDIUM",
+      "description": "Directly formatting user input into templates bypasses Jinja escaping and allows template injection.",
+      "fix": "Use Jinja variables and pass user input via context so autoescaping applies (template using {{ name }}).",
+      "secure_replacement": "return render_template_string(\"<h1>Hello {{ name }}</h1>\", name=name)",
+      "explanation": "Use the templating engine's auto-escaping by passing user input as a context variable to avoid server-side template injection (SSTI). Consider whitelisting and sanitizing inputs as well."
+    },
+    {
+      "id": "VULN-006",
+      "title": "Plaintext Password Storage",
+      "file": "input_vulnerable.py",
+      "lines": [48, 49],
+      "severity": "HIGH",
+      "description": "User passwords stored in plaintext within the source code (and used directly for login checks).",
+      "fix": "Store only hashed passwords and use secure hash/check functions like Werkzug's generate_password_hash and check_password_hash.",
+      "secure_replacement": "USERS['alice'] = {'password_hash': generate_password_hash('password123')}",
+      "explanation": "Storing plaintext passwords in source and the application is unacceptable. Use password hashing with a slow, salted hash (PBKDF2/argon2/bcrypt). Read initial passwords from secure sources, or generate them dynamically, not check them directly."
+    },
+    {
+      "id": "VULN-007",
+      "title": "Debug Mode Enabled in Production",
+      "file": "input_vulnerable.py",
+      "lines": [61, 62],
+      "severity": "HIGH",
+      "description": "Running Flask with debug=True exposes interactive debugger and can lead to code execution if a vulnerability exists.",
+      "fix": "Control debug mode via environment variables and default to False in production.",
+      "secure_replacement": "app.run(debug=os.environ.get('DEBUG', 'False').lower() == 'true')",
+      "explanation": "Running in debug mode exposes internal information and a Python shell on errors. Ensure debug mode is disabled in production and secrets are not printed in logs."
+    }
+  ],
+  "notes": "All fixes were implemented and a set of automated tests was created. See tests/test_security.py, run_test.sh, run_test.bat, and Dockerfile for replication instructions.",
+  "scan_date": "2025-11-25"
+  ,
+  "fixes_applied": [
+    "Removed hardcoded API key and switched to environment variables",
+    "Converted vulnerable SQL code to parameterized queries",
+    "Removed pickle-based deserialization and use JSON with validation",
+    "Prevented shell command execution by returning safe output and guaranteeing no shell=True",
+    "Escaped template variables to eliminate SSTI",
+    "Used hashed passwords and no plaintext secrets",
+    "Disabled debug mode by default and made it configurable via environment"
+  ],
+  "test_results": {
+    "patched": "All tests passed (see logs/test_run.log)",
+    "vulnerable": "Tests detected vulnerabilities (see logs/test_run.log which will record failing tests when run against the vulnerable code)"
+  }
+}

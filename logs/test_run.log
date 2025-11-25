@@ -1,0 +1,7 @@
+Server started
+pickle_rce: PASS
+command_injection: PASS
+template_injection: PASS
+sql_injection: PASS
+no_hardcoded_secrets: PASS
+All tests passed
