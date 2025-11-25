@@ -1,0 +1,78 @@
+===== Tests against ORIGINAL code (expected to FAIL) ===== 
+FF.F                                                                     [100%]
+================================== FAILURES ===================================
+______________________ test_default_password_not_usable _______________________
+
+app_default = <module 'input' from 'D:\\vscoderprojects\\raptor-secondary\\v-JianzhangDong_25_11_25\\input.py'>
+
+    def test_default_password_not_usable(app_default):
+        app = app_default.app
+        client = app.test_client()
+    
+        # Obtain server-side CSRF token (generated on import)
+        csrf_token = getattr(app_default, "CSRF_TOKEN", None)
+    
+        resp = client.post(
+            "/login",
+            json={"username": "alice", "password": "ChangeThisPassword!123"},
+            headers={"X-CSRF-Token": csrf_token} if csrf_token else None,
+        )
+>       assert resp.status_code == 401, (
+            "Default hardcoded password must not authenticate the demo user 'alice'."
+        )
+E       AssertionError: Default hardcoded password must not authenticate the demo user 'alice'.
+E       assert 200 == 401
+E        +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code
+
+tests\test_security.py:61: AssertionError
+______________________ test_csrf_required_for_post_login ______________________
+
+app_with_bob = <module 'input' from 'D:\\vscoderprojects\\raptor-secondary\\v-JianzhangDong_25_11_25\\input.py'>
+
+    def test_csrf_required_for_post_login(app_with_bob):
+        app = app_with_bob.app
+        client = app.test_client()
+    
+        # Missing CSRF token should be rejected
+        resp = client.post(
+            "/login",
+            json={"username": "bob", "password": "Password1!"},
+        )
+>       assert resp.status_code == 403, "POST /login must enforce CSRF protection"
+E       AssertionError: POST /login must enforce CSRF protection
+E       assert 200 == 403
+E        +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code
+
+tests\test_security.py:75: AssertionError
+________________________ test_security_headers_present ________________________
+
+app_with_bob = <module 'input' from 'D:\\vscoderprojects\\raptor-secondary\\v-JianzhangDong_25_11_25\\input.py'>
+
+    def test_security_headers_present(app_with_bob):
+        app = app_with_bob.app
+        client = app.test_client()
+    
+        resp = client.get("/greet?name=world")
+    
+        expected_headers = {
+            "X-Content-Type-Options": "nosniff",
+            "X-Frame-Options": "DENY",
+            "Referrer-Policy": "no-referrer",
+        }
+        for header, expected in expected_headers.items():
+>           assert resp.headers.get(header) == expected, f"Missing security header {header}"
+E           AssertionError: Missing security header X-Content-Type-Options
+E           assert None == 'nosniff'
+E            +  where None = <bound method Headers.get of Headers([('Content-Type', 'text/html; charset=utf-8'), ('Content-Length', '20')])>('X-Content-Type-Options')
+E            +    where <bound method Headers.get of Headers([('Content-Type', 'text/html; charset=utf-8'), ('Content-Length', '20')])> = Headers([('Content-Type', 'text/html; charset=utf-8'), ('Content-Length', '20')]).get
+E            +      where Headers([('Content-Type', 'text/html; charset=utf-8'), ('Content-Length', '20')]) = <WrapperTestResponse streamed [200 OK]>.headers
+
+tests\test_security.py:103: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_security.py::test_default_password_not_usable - AssertionEr...
+FAILED tests/test_security.py::test_csrf_required_for_post_login - AssertionE...
+FAILED tests/test_security.py::test_security_headers_present - AssertionError...
+3 failed, 1 passed in 0.92s
+....                                                                     [100%]
+4 passed in 0.74s
+All checks completed. Original: FAILED (expected). Fixed: PASSED. 

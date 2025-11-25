@@ -1,0 +1,86 @@
+{
+  "summary": {
+    "generated_at": "2025-11-25T00:00:00Z",
+    "total_vulnerabilities": 3,
+    "severity_counts": {
+      "high": 1,
+      "medium": 2
+    },
+    "files_assessed": [
+      "input.py"
+    ]
+  },
+  "vulnerabilities": [
+    {
+      "id": "VULN-001",
+      "title": "Hardcoded default password for demo user",
+      "severity": "high",
+      "file": "input.py",
+      "line_start": 72,
+      "line_end": 74,
+      "description": "The original code sets a hardcoded default password (ChangeThisPassword!123) for the demo user 'alice' when ALICE_PASSWORD/USERS_JSON are not provided.",
+      "impact": "Attackers can authenticate with a known credential if the environment is misconfigured, leading to account compromise.",
+      "fix": {
+        "file": "input.py",
+        "line_start": 75,
+        "line_end": 82,
+        "description": "Remove the hardcoded default and generate an ephemeral strong password when no credentials are provided, prompting operators to supply deterministic credentials via environment variables.",
+        "secure_code_snippet": "default_pwd = os.environ.get(\"ALICE_PASSWORD\")\nif default_pwd is None:\n    default_pwd = secrets.token_urlsafe(16)\n    app.logger.warning(\"ALICE_PASSWORD not set; generated ephemeral password for alice. Set USERS_JSON or ALICE_PASSWORD to provide deterministic credentials.\")"
+      },
+      "references": [
+        "https://owasp.org/Top10/A07_2021-Identification_and_Authentication_Failures/"
+      ]
+    },
+    {
+      "id": "VULN-002",
+      "title": "Missing CSRF protection on state-changing endpoints",
+      "severity": "medium",
+      "file": "input.py",
+      "line_start": 24,
+      "line_end": 88,
+      "description": "POST endpoints (/upload_profile, /run, /login) lacked CSRF protection, allowing cross-site request forgery if authenticated sessions are used.",
+      "impact": "An attacker could coerce a victim's browser to perform authenticated actions without their consent.",
+      "fix": {
+        "file": "input.py",
+        "line_start": 97,
+        "line_end": 126,
+        "description": "Introduce a @before_request hook that enforces CSRF tokens (header/form/json) or validates Origin/Referer against trusted origins for unsafe HTTP methods.",
+        "secure_code_snippet": "@app.before_request\ndef enforce_csrf():\n    if request.method not in {\"POST\", \"PUT\", \"PATCH\", \"DELETE\"}:\n        return None\n    if request.path in CSRF_EXEMPT_PATHS:\n        return None\n    token = request.headers.get(\"X-CSRF-Token\") or request.form.get(\"csrf_token\")\n    if request.is_json and token is None:\n        token = (request.json or {}).get(\"csrf_token\")\n    if token is not None:\n        if not hmac.compare_digest(str(token), str(CSRF_TOKEN)):\n            return jsonify({\"error\": \"Invalid CSRF token\"}), 403\n        return None\n    origin = request.headers.get(\"Origin\") or request.headers.get(\"Referer\")\n    if origin:\n        origin_host = urlparse(origin).hostname\n        request_host = urlparse(request.host_url).hostname\n        if origin_host == request_host or origin in CSRF_TRUSTED_ORIGINS or origin_host in CSRF_TRUSTED_ORIGINS:\n            return None\n    return jsonify({\"error\": \"CSRF token required\"}), 403"
+      },
+      "references": [
+        "https://owasp.org/Top10/A05_2021-Security_Misconfiguration/",
+        "https://owasp.org/www-community/attacks/csrf"
+      ]
+    },
+    {
+      "id": "VULN-003",
+      "title": "Missing security headers (CSP, X-Frame-Options, etc.)",
+      "severity": "medium",
+      "file": "input.py",
+      "line_start": 1,
+      "line_end": 90,
+      "description": "The application did not set common defensive HTTP headers to mitigate clickjacking, MIME sniffing, and basic XSS vectors.",
+      "impact": "Browsers may render content in less secure ways, increasing exposure to UI redress and injection risks.",
+      "fix": {
+        "file": "input.py",
+        "line_start": 128,
+        "line_end": 137,
+        "description": "Add an @after_request hook to set X-Content-Type-Options, X-Frame-Options, Referrer-Policy, and Content-Security-Policy, and apply HSTS when served over HTTPS.",
+        "secure_code_snippet": "@app.after_request\ndef add_security_headers(resp):\n    resp.headers.setdefault(\"X-Content-Type-Options\", \"nosniff\")\n    resp.headers.setdefault(\"X-Frame-Options\", \"DENY\")\n    resp.headers.setdefault(\"Referrer-Policy\", \"no-referrer\")\n    resp.headers.setdefault(\"Content-Security-Policy\", \"default-src 'self'; frame-ancestors 'none'; object-src 'none'\")\n    if request.scheme == \"https\":\n        resp.headers.setdefault(\"Strict-Transport-Security\", \"max-age=63072000; includeSubDomains; preload\")\n    return resp"
+      },
+      "references": [
+        "https://owasp.org/Top10/A05_2021-Security_Misconfiguration/",
+        "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy"
+      ]
+    }
+  ],
+  "hardcoded_secrets": [
+    {
+      "file": "input.py",
+      "line_start": 72,
+      "line_end": 72,
+      "secret": "ChangeThisPassword!123",
+      "note": "Removed in the fixed version; replaced with a generated ephemeral password when no credentials are provided."
+    }
+  ]
+}
