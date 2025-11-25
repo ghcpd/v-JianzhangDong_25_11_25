@@ -2,9 +2,6 @@ from flask import Flask, request, render_template_string, jsonify
 import sqlite3
 import os
 import json
-import secrets
-import hmac
-from urllib.parse import urlparse
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
@@ -72,68 +69,13 @@ def _load_users():
         except Exception:
             app.logger.exception("Failed to parse USERS_JSON; falling back to default user")
     # Default demo user (password should be overridden via USERS_JSON or ALICE_PASSWORD env var)
-    default_pwd = os.environ.get("ALICE_PASSWORD")
-    if default_pwd is None:
-        # Generate an ephemeral strong password and DO NOT log it to avoid leaking credentials
-        default_pwd = secrets.token_urlsafe(16)
-        app.logger.warning(
-            "ALICE_PASSWORD not set; generated ephemeral password for alice. "
-            "Set USERS_JSON or ALICE_PASSWORD to provide deterministic credentials."
-        )
+    default_pwd = os.environ.get("ALICE_PASSWORD", "ChangeThisPassword!123")
     return {
         "alice": {"password_hash": generate_password_hash(default_pwd)}
     }
 
 
 USERS = _load_users()
-
-# CSRF protection settings
-CSRF_TOKEN = os.environ.get("CSRF_TOKEN") or secrets.token_urlsafe(32)
-CSRF_TRUSTED_ORIGINS = {o for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o}
-CSRF_EXEMPT_PATHS = {"/greet"}
-
-
-@app.before_request
-def enforce_csrf():
-    """Lightweight CSRF protection for state-changing requests.
-
-    Accepts either a shared secret via X-CSRF-Token/Form/JSON or validates Origin/Referer.
-    """
-    if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
-        return None
-    if request.path in CSRF_EXEMPT_PATHS:
-        return None
-
-    # 1) Token-based check (preferred)
-    token = request.headers.get("X-CSRF-Token") or request.form.get("csrf_token")
-    if request.is_json and token is None:
-        token = (request.json or {}).get("csrf_token")
-    if token is not None:
-        if not hmac.compare_digest(str(token), str(CSRF_TOKEN)):
-            return jsonify({"error": "Invalid CSRF token"}), 403
-        return None
-
-    # 2) Origin/Referer fallback check
-    origin = request.headers.get("Origin") or request.headers.get("Referer")
-    if origin:
-        origin_host = urlparse(origin).hostname
-        request_host = urlparse(request.host_url).hostname
-        if origin_host == request_host or origin in CSRF_TRUSTED_ORIGINS or origin_host in CSRF_TRUSTED_ORIGINS:
-            return None
-
-    return jsonify({"error": "CSRF token required"}), 403
-
-
-@app.after_request
-def add_security_headers(resp):
-    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
-    resp.headers.setdefault("X-Frame-Options", "DENY")
-    resp.headers.setdefault("Referrer-Policy", "no-referrer")
-    resp.headers.setdefault("Content-Security-Policy", "default-src 'self'; frame-ancestors 'none'; object-src 'none'")
-    # Apply HSTS only when served over HTTPS
-    if request.scheme == "https":
-        resp.headers.setdefault("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
-    return resp
 
 @app.route('/login', methods=['POST'])
 def login():
