@@ -1,0 +1,118 @@
+{
+  "audit_date": "2025-11-25",
+  "file_audited": "input.py",
+  "total_vulnerabilities": 6,
+  "vulnerabilities": [
+    {
+      "id": 1,
+      "type": "Hardcoded Secret - API Key",
+      "severity": "CRITICAL",
+      "description": "API key hardcoded in source code",
+      "location": {
+        "file": "input.py",
+        "lines": [10, 11]
+      },
+      "vulnerable_code": "API_KEY = \"AKIA_EXAMPLE_HARDCODED_KEY_123456\"",
+      "risk": "Exposure of sensitive credentials in version control, accessible to anyone with code access",
+      "fix": "Move API_KEY to environment variables using os.getenv()",
+      "secure_replacement": "API_KEY = os.getenv('API_KEY', None)\nif not API_KEY:\n    raise ValueError('API_KEY environment variable not set')",
+      "cwe": "CWE-798: Use of Hard-Coded Credentials"
+    },
+    {
+      "id": 2,
+      "type": "SQL Injection",
+      "severity": "CRITICAL",
+      "description": "User input directly formatted into SQL query without parameterization",
+      "location": {
+        "file": "input.py",
+        "lines": [17, 18]
+      },
+      "vulnerable_code": "sql = \"SELECT id, username FROM users WHERE username LIKE '%{}%'\".format(name)",
+      "risk": "Attacker can execute arbitrary SQL commands, extract data, modify database, or perform authentication bypass",
+      "fix": "Use parameterized queries with placeholders",
+      "secure_replacement": "sql = \"SELECT id, username FROM users WHERE username LIKE ?\"\ncur.execute(sql, ('%' + name + '%',))",
+      "cwe": "CWE-89: SQL Injection"
+    },
+    {
+      "id": 3,
+      "type": "Unsafe Deserialization",
+      "severity": "CRITICAL",
+      "description": "Using pickle.loads() on untrusted user input",
+      "location": {
+        "file": "input.py",
+        "lines": [24, 25]
+      },
+      "vulnerable_code": "data = request.data\nprofile = pickle.loads(data)",
+      "risk": "Remote Code Execution (RCE) - attacker can craft malicious pickle data to execute arbitrary code",
+      "fix": "Use safe deserialization like json.loads() or validate pickle data with strict protocols",
+      "secure_replacement": "import json\ndata = request.get_json()\nprofile = data",
+      "cwe": "CWE-502: Deserialization of Untrusted Data"
+    },
+    {
+      "id": 4,
+      "type": "OS Command Injection",
+      "severity": "CRITICAL",
+      "description": "User input directly concatenated into os.system() command",
+      "location": {
+        "file": "input.py",
+        "lines": [33, 34]
+      },
+      "vulnerable_code": "os.system(\"echo Running: \" + cmd)",
+      "risk": "Command injection - attacker can execute arbitrary shell commands with application privileges",
+      "fix": "Use subprocess module with shell=False and pass arguments as list",
+      "secure_replacement": "import subprocess\nsubprocess.run(['echo', 'Running:', cmd], shell=False)",
+      "cwe": "CWE-78: OS Command Injection"
+    },
+    {
+      "id": 5,
+      "type": "Template Injection (XSS)",
+      "severity": "HIGH",
+      "description": "User input unsanitized in Jinja2 template via string formatting",
+      "location": {
+        "file": "input.py",
+        "lines": [42, 43]
+      },
+      "vulnerable_code": "template = \"<h1>Hello %s</h1>\" % name\nreturn render_template_string(template)",
+      "risk": "Cross-Site Scripting (XSS) - attacker can inject JavaScript or HTML to execute malicious scripts",
+      "fix": "Use Jinja2 variable escaping or avoid render_template_string",
+      "secure_replacement": "from markupsafe import escape\nreturn f\"<h1>Hello {escape(name)}</h1>\"",
+      "cwe": "CWE-79: Cross-Site Scripting (XSS)"
+    },
+    {
+      "id": 6,
+      "type": "Hardcoded Credentials & Plain Text Password Storage",
+      "severity": "CRITICAL",
+      "description": "User passwords stored in plain text in source code",
+      "location": {
+        "file": "input.py",
+        "lines": [48, 49]
+      },
+      "vulnerable_code": "USERS = {\n    \"alice\": {\"password\": \"password123\"},\n}",
+      "risk": "Exposure of user credentials in version control; plain text comparison vulnerable to brute force attacks",
+      "fix": "Use password hashing (bcrypt/argon2) and load user data from secure database with hashed passwords",
+      "secure_replacement": "from werkzeug.security import generate_password_hash, check_password_hash\n# Use hashed passwords and load from database\nUSERS = {\n    \"alice\": {\"password\": generate_password_hash('password123')}\n}",
+      "cwe": "CWE-256: Plaintext Storage of Password"
+    },
+    {
+      "id": 7,
+      "type": "Debug Mode Enabled in Production",
+      "severity": "HIGH",
+      "description": "Flask debug mode enabled which exposes sensitive information",
+      "location": {
+        "file": "input.py",
+        "lines": [59, 60]
+      },
+      "vulnerable_code": "if __name__ == '__main__':\n    app.run(debug=True)",
+      "risk": "Debug mode reveals stack traces, environment variables, and source code to attackers",
+      "fix": "Disable debug mode in production; use environment variable to control",
+      "secure_replacement": "if __name__ == '__main__':\n    debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'\n    app.run(debug=debug_mode)",
+      "cwe": "CWE-215: Information Exposure Through Debug Information"
+    }
+  ],
+  "summary": {
+    "critical_vulnerabilities": 5,
+    "high_vulnerabilities": 2,
+    "total_issues": 7,
+    "recommendation": "All vulnerabilities must be fixed before deploying to production. Implement the secure replacements provided and conduct follow-up security testing."
+  }
+}

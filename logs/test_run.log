@@ -1,0 +1,78 @@
+[2025-11-25 14:50:31] [INFO] ============================================================
+[2025-11-25 14:50:31] [INFO] FLASK SECURITY AUDIT - AUTOMATIC TEST EXECUTION
+[2025-11-25 14:50:31] [INFO] ============================================================
+[2025-11-25 14:50:31] [INFO] 
+[2025-11-25 14:50:31] [INFO] Detected OS: Windows
+[2025-11-25 14:50:31] [INFO] Python Version: 3.14.0
+[2025-11-25 14:50:31] [INFO] In Docker: False
+[2025-11-25 14:50:31] [INFO] 
+[2025-11-25 14:50:31] [INFO] Verifying security artifacts...
+[2025-11-25 14:51:18] [INFO] ============================================================
+[2025-11-25 14:51:18] [INFO] FLASK SECURITY AUDIT - AUTOMATIC TEST EXECUTION
+[2025-11-25 14:51:18] [INFO] ============================================================
+[2025-11-25 14:51:18] [INFO] 
+[2025-11-25 14:51:18] [INFO] Detected OS: Windows
+[2025-11-25 14:51:18] [INFO] Python Version: 3.14.0
+[2025-11-25 14:51:18] [INFO] In Docker: False
+[2025-11-25 14:51:18] [INFO] 
+[2025-11-25 14:51:18] [INFO] Verifying security artifacts...
+[2025-11-25 14:51:18] [INFO] [OK] Security vulnerability report (report.json)
+[2025-11-25 14:51:18] [INFO] [OK] Secure version of application (secure_input.py)
+[2025-11-25 14:51:18] [INFO] [OK] Python dependencies (requirements.txt)
+[2025-11-25 14:51:18] [INFO] [OK] Test suite (test_vulnerabilities.py)
+[2025-11-25 14:51:18] [INFO] 
+[2025-11-25 14:51:18] [INFO] Setting up test environment...
+[2025-11-25 14:51:18] [INFO] [OK] Environment variables configured
+[2025-11-25 14:51:18] [INFO] 
+[2025-11-25 14:51:18] [INFO] Checking Python dependencies...
+[2025-11-25 14:51:18] [ERROR] [ERROR] Missing package: No module named 'flask'
+[2025-11-25 14:51:18] [WARNING] Installing requirements...
+[2025-11-25 14:51:31] [INFO] 
+[2025-11-25 14:51:31] [INFO] ============================================================
+[2025-11-25 14:51:31] [INFO] RUNNING TEST SUITE
+[2025-11-25 14:51:31] [INFO] ============================================================
+[2025-11-25 14:51:33] [INFO] 
+[2025-11-25 14:51:33] [INFO] ============================================================
+[2025-11-25 14:51:33] [INFO] SECURITY AUDIT REPORT
+[2025-11-25 14:51:33] [INFO] ============================================================
+[2025-11-25 14:51:33] [INFO] File: input.py
+[2025-11-25 14:51:33] [INFO] Audit Date: 2025-11-25
+[2025-11-25 14:51:33] [INFO] Total Vulnerabilities: 6
+[2025-11-25 14:51:33] [INFO] 
+[1] Hardcoded Secret - API Key (Severity: CRITICAL)
+[2025-11-25 14:51:33] [INFO]     Lines: [10, 11]
+[2025-11-25 14:51:33] [INFO]     API key hardcoded in source code
+[2025-11-25 14:51:33] [INFO] 
+[2] SQL Injection (Severity: CRITICAL)
+[2025-11-25 14:51:33] [INFO]     Lines: [17, 18]
+[2025-11-25 14:51:33] [INFO]     User input directly formatted into SQL query without parameterization
+[2025-11-25 14:51:33] [INFO] 
+[3] Unsafe Deserialization (Severity: CRITICAL)
+[2025-11-25 14:51:33] [INFO]     Lines: [24, 25]
+[2025-11-25 14:51:33] [INFO]     Using pickle.loads() on untrusted user input
+[2025-11-25 14:51:33] [INFO] 
+[4] OS Command Injection (Severity: CRITICAL)
+[2025-11-25 14:51:33] [INFO]     Lines: [33, 34]
+[2025-11-25 14:51:33] [INFO]     User input directly concatenated into os.system() command
+[2025-11-25 14:51:33] [INFO] 
+[5] Template Injection (XSS) (Severity: HIGH)
+[2025-11-25 14:51:33] [INFO]     Lines: [42, 43]
+[2025-11-25 14:51:33] [INFO]     User input unsanitized in Jinja2 template via string formatting
+[2025-11-25 14:51:33] [INFO] 
+[6] Hardcoded Credentials & Plain Text Password Storage (Severity: CRITICAL)
+[2025-11-25 14:51:33] [INFO]     Lines: [48, 49]
+[2025-11-25 14:51:33] [INFO]     User passwords stored in plain text in source code
+[2025-11-25 14:51:33] [INFO] 
+[7] Debug Mode Enabled in Production (Severity: HIGH)
+[2025-11-25 14:51:33] [INFO]     Lines: [59, 60]
+[2025-11-25 14:51:33] [INFO]     Flask debug mode enabled which exposes sensitive information
+[2025-11-25 14:51:33] [INFO] 
+[2025-11-25 14:51:33] [INFO] ============================================================
+[2025-11-25 14:51:33] [INFO] TEST EXECUTION SUMMARY
+[2025-11-25 14:51:33] [INFO] ============================================================
+[2025-11-25 14:51:33] [INFO] [FAIL] Some tests FAILED
+[2025-11-25 14:51:33] [INFO] [FAIL] Please review failures above
+[2025-11-25 14:51:33] [INFO] 
+[2025-11-25 14:51:33] [INFO] Test Log: logs\test_run.log
+[2025-11-25 14:51:33] [INFO] Environment: Windows
+[2025-11-25 14:51:33] [INFO] Results saved to: logs\test_results.json

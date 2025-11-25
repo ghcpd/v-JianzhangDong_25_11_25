@@ -1,0 +1,26 @@
+{
+  "timestamp": "2025-11-25T14:51:18.340982",
+  "environment": {
+    "os": "Windows",
+    "python_version": "3.14.0",
+    "python_implementation": "CPython",
+    "in_docker": false,
+    "in_wsl": false,
+    "platform": "Windows-11-10.0.26100-SP0",
+    "processor": "Intel64 Family 6 Model 167 Stepping 1, GenuineIntel"
+  },
+  "tests": [
+    {
+      "name": "pytest test suite",
+      "status": "failed",
+      "exit_code": 1
+    }
+  ],
+  "summary": {
+    "tests_passed": false,
+    "environment_os": "Windows",
+    "in_docker": false,
+    "timestamp": "2025-11-25T14:51:33.428264",
+    "log_file": "logs\\test_run.log"
+  }
+}
