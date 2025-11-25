@@ -1,0 +1,144 @@
+TEST RUN - 2025/11/25 ÖÜ¶þ 15:43:51.50 
+Running tests against ORIGINAL (vulnerable) version... 
+FFFFFF                                                                   [100%]
+================================== FAILURES ===================================
+__________________________ test_no_hardcoded_api_key __________________________
+
+    def test_no_hardcoded_api_key():
+        import re
+        with open('input.py', 'r', encoding='utf-8') as f:
+            src = f.read()
+        # There should be no obvious hardcoded AWS style keys (AKIA_*)
+        # And there should not be an assignment of API_KEY to a string literal in source
+>       assert 'AKIA_' not in src
+E       assert 'AKIA_' not in 'from flask ...ebug=True)\n'
+E         
+E         'AKIA_' is contained here:
+E           PI_KEY = "AKIA_EXAMPLE_HARDCODED_KEY_123456"
+E         ?           +++++
+E           
+E           
+E           def query_users_by_name(name):...
+E         
+E         ...Full output truncated (50 lines hidden), use '-vv' to show
+
+tests\test_security.py:35: AssertionError
+________________________ test_sql_injection_prevented _________________________
+
+    def test_sql_injection_prevented():
+        setup_users_db()
+        mod = reload_module()
+        # Attempt a classical SQL injection that would return all rows if vulnerable
+        res = mod.query_users_by_name("' OR '1'='1")
+        # Secure behavior: literal search should not match and should return 0 rows
+        assert isinstance(res, list)
+>       assert len(res) == 0
+E       AssertionError: assert 2 == 0
+E        +  where 2 = len([(1, 'alice'), (2, 'bob')])
+
+tests\test_security.py:46: AssertionError
+_______________________ test_pickled_upload_not_execute _______________________
+
+    def test_pickled_upload_not_execute():
+        # craft a malicious pickle payload that attempts to write a file
+        class Expl(object):
+            def __reduce__(self):
+                return (os.system, ("echo PICKLE_PWN > pickle_exploit.txt",))
+    
+        payload = pickle.dumps(Expl())
+        mod = reload_module()
+        client = mod.app.test_client()
+        # remove file if exists
+        if os.path.exists('pickle_exploit.txt'):
+            os.remove('pickle_exploit.txt')
+    
+        resp = client.post('/upload_profile', data=payload, content_type='application/octet-stream')
+        # Give any executed process a moment
+        time.sleep(0.1)
+        # Secure behavior: the payload must NOT create the file
+>       assert not os.path.exists('pickle_exploit.txt')
+E       AssertionError: assert not True
+E        +  where True = <function exists at 0x000001DDA3908FE0>('pickle_exploit.txt')
+E        +    where <function exists at 0x000001DDA3908FE0> = <module 'ntpath' (frozen)>.exists
+E        +      where <module 'ntpath' (frozen)> = os.path
+
+tests\test_security.py:66: AssertionError
+------------------------------ Captured log call ------------------------------
+ERROR    input:app.py:875 Exception on /upload_profile [POST]
+Traceback (most recent call last):
+  File "C:\GenAI\Bug_Bash\25_11_07\oswe-mini-secondary\v-JianzhangDong_25_11_25\.venv\Lib\site-packages\flask\app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\GenAI\Bug_Bash\25_11_07\oswe-mini-secondary\v-JianzhangDong_25_11_25\.venv\Lib\site-packages\flask\app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\GenAI\Bug_Bash\25_11_07\oswe-mini-secondary\v-JianzhangDong_25_11_25\.venv\Lib\site-packages\flask\app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\GenAI\Bug_Bash\25_11_07\oswe-mini-secondary\v-JianzhangDong_25_11_25\.venv\Lib\site-packages\flask\app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\GenAI\Bug_Bash\25_11_07\oswe-mini-secondary\v-JianzhangDong_25_11_25\input.py", line 29, in upload_profile
+    return jsonify({"status": "ok", "name": profile.get("name")})
+                                            ^^^^^^^^^^^
+AttributeError: 'int' object has no attribute 'get'
+___________________ test_run_endpoint_no_command_execution ____________________
+
+    def test_run_endpoint_no_command_execution():
+        mod = reload_module()
+        client = mod.app.test_client()
+        if os.path.exists('cmd_exploit.txt'):
+            os.remove('cmd_exploit.txt')
+    
+        # Try to craft a command that would create a file via shell
+        cmd = "echo CMD_PWN > cmd_exploit.txt"
+        resp = client.post('/run', data={'cmd': cmd})
+        time.sleep(0.1)
+>       assert not os.path.exists('cmd_exploit.txt')
+E       AssertionError: assert not True
+E        +  where True = <function exists at 0x000001DDA3908FE0>('cmd_exploit.txt')
+E        +    where <function exists at 0x000001DDA3908FE0> = <module 'ntpath' (frozen)>.exists
+E        +      where <module 'ntpath' (frozen)> = os.path
+
+tests\test_security.py:79: AssertionError
+___________________________ test_xss_greet_escaped ____________________________
+
+    def test_xss_greet_escaped():
+        mod = reload_module()
+        client = mod.app.test_client()
+        resp = client.get('/greet?name=<script>alert(1)</script>')
+        # Secure: returned HTML should not contain raw <script> tag
+>       assert b'<script' not in resp.data
+E       AssertionError: assert b'<script' not in b'<h1>Hello <script>alert(1)</script></h1>'
+E        +  where b'<h1>Hello <script>alert(1)</script></h1>' = <WrapperTestResponse 40 bytes [200 OK]>.data
+
+tests\test_security.py:87: AssertionError
+_____________________ test_passwords_hashed_and_debug_off _____________________
+
+    def test_passwords_hashed_and_debug_off():
+        mod = reload_module()
+        # passwords should not be in cleartext
+        users = getattr(mod, 'USERS', {})
+        for u, info in users.items():
+            pw = info.get('password', '')
+            # simple heuristic: hashed passwords contain salt/algorithm info
+>           assert pw and 'password123' not in pw
+E           AssertionError: assert ('password123' and 'password123' not in 'password123'
+E             
+E             'password123' is contained here:
+E               password123)
+
+tests\test_security.py:97: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_security.py::test_no_hardcoded_api_key - assert 'AKIA_' not...
+FAILED tests/test_security.py::test_sql_injection_prevented - AssertionError:...
+FAILED tests/test_security.py::test_pickled_upload_not_execute - AssertionErr...
+FAILED tests/test_security.py::test_run_endpoint_no_command_execution - Asser...
+FAILED tests/test_security.py::test_xss_greet_escaped - AssertionError: asser...
+FAILED tests/test_security.py::test_passwords_hashed_and_debug_off - Assertio...
+6 failed in 0.62s
+As expected, tests failed against the original vulnerable source - exit 1
+Restoring patched app and re-running tests (should pass)... 
+......                                                                   [100%]
+6 passed in 0.58s
+All checks passed against patched version. 

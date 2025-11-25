@@ -1,0 +1,82 @@
+{
+  "summary": "Security audit and fixes for input.py",
+  "files_changed": ["input.py", "input_vulnerable.py", "tests/test_security.py", "run_test.sh", "run_test.bat", "setup.sh", "Dockerfile", "detect_and_run.py", "requirements.txt"],
+  "vulnerabilities": [
+    {
+      "id": "hardcoded_secret",
+      "severity": "high",
+      "file": "input.py",
+      "lines": [9],
+      "description": "Hardcoded API key found in source (AKIA style). Hardcoded secrets may be leaked via source control.",
+      "remediation": "Remove hardcoded key; read from environment variables (os.getenv).",
+      "replacement": "API_KEY = os.getenv('APP_API_KEY')"
+    },
+    {
+      "id": "sql_injection",
+      "severity": "critical",
+      "file": "input.py",
+      "lines": [12, 13, 15, 16, 17],
+      "description": "query_users_by_name concatenates user-supplied input into SQL statement (string formatting), enabling SQL injection.",
+      "remediation": "Use parameterized SQL queries and avoid formatting user input directly into SQL. Use DB abstraction where possible.",
+      "replacement": "cur.execute(\"SELECT id, username FROM users WHERE username LIKE ?\", (f\"%{name}%\",))"
+    },
+    {
+      "id": "unsafe_deserialization",
+      "severity": "critical",
+      "file": "input.py",
+      "lines": [23, 24, 25, 27],
+      "description": "Untrusted pickle.loads on request data — leads to remote code execution when users send crafted payloads.",
+      "remediation": "Do not deserialize untrusted pickles. Accept safe formats like JSON and validate inputs.",
+      "replacement": "profile = request.get_json(force=True)"
+    },
+    {
+      "id": "command_injection",
+      "severity": "critical",
+      "file": "input.py",
+      "lines": [32, 34, 35, 36],
+      "description": "os.system executed with user input concatenated — allows arbitrary shell command execution and redirection.",
+      "remediation": "Do not call shell commands with unsanitized user input. Use a strict whitelist or avoid shell execution entirely.",
+      "replacement": "validate and whitelist commands, disallow shell metacharacters; implement behavior in Python instead of os.system"
+    },
+    {
+      "id": "stored_xss",
+      "severity": "high",
+      "file": "input.py",
+      "lines": [40, 42, 44, 45],
+      "description": "render_template_string called with user input interpolated directly — cross-site scripting (XSS) risk.",
+      "remediation": "Use templating safely routing values through context (Jinja auto-escapes) or explicitly escape user input.",
+      "replacement": "render_template_string(\"<h1>Hello {{ name }}<\/h1>\", name=name)"
+    },
+    {
+      "id": "plaintext_credentials",
+      "severity": "high",
+      "file": "input.py",
+      "lines": [48, 49],
+      "description": "Plaintext credentials stored in source code (USERS dict) – attacker with repo access gains credentials.",
+      "remediation": "Store salted hashes instead using a secure password hashing function (werkzeug.security or bcrypt); store secrets in a secure store or environment variables.",
+      "replacement": "USERS['alice']['password'] = generate_password_hash('password123')"
+    },
+    {
+      "id": "debug_enabled",
+      "severity": "medium",
+      "file": "input.py",
+      "lines": [61, 62],
+      "description": "app.run(debug=True) enables the interactive debugger and potentially exposes secrets or remote code execution when reachable.",
+      "remediation": "Disable debug mode in production (debug=False or controlled by env var).",
+      "replacement": "app.run(debug=False)"
+    }
+  ],
+  "actions_taken": [
+    "Saved original vulnerable file as input_vulnerable.py",
+    "Implemented parameterized queries (query_users_by_name)",
+    "Removed pickle.loads and accept validated JSON for /upload_profile",
+    "Disabled arbitrary shell exec; implemented whitelisted behavior for /run",
+    "Escaped user input in templates and used safe rendering",
+    "Replaced plaintext password with hashed password using werkzeug.security",
+    "Disabled debug mode when starting the app",
+    "Added reproducible tests (pytest) that fail on the original and pass on the patched code",
+    "Added run scripts and Dockerfile to reproduce behavior on Windows/Linux/Docker and aggregated logs"
+  ],
+  "test_instructions": "Run detect_and_run.py or run run_test.sh (Linux/Mac) or run_test.bat (Windows). Logs are saved at logs/test_run.log",
+  "timestamp": "2025-11-25T00:00:00Z"
+}
