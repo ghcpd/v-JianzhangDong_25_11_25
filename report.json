@@ -1,0 +1,190 @@
+{
+  "audit_metadata": {
+    "audit_date": "2025-11-25",
+    "auditor": "Security Audit System",
+    "source_file": "input.py",
+    "repaired_file": "input_secure.py",
+    "total_vulnerabilities": 7,
+    "critical_count": 5,
+    "high_count": 1,
+    "medium_count": 1
+  },
+  "vulnerabilities": [
+    {
+      "id": "VULN-001",
+      "severity": "CRITICAL",
+      "category": "Hardcoded Secrets",
+      "title": "Hardcoded API Key",
+      "description": "AWS-style API key is hardcoded in the source code, exposing sensitive credentials.",
+      "file": "input.py",
+      "line_numbers": [9],
+      "vulnerable_code": "API_KEY = \"AKIA_EXAMPLE_HARDCODED_KEY_123456\"",
+      "impact": "Unauthorized access to AWS services, potential data breach, and financial damage.",
+      "cwe": "CWE-798: Use of Hard-coded Credentials",
+      "cvss_score": 9.8,
+      "fix_explanation": "Moved API key to environment variable. The secure version loads the key from environment using os.environ.get('API_KEY'). API keys should never be stored in source code and should be managed through environment variables or secure secret management services.",
+      "secure_replacement": "API_KEY = os.environ.get('API_KEY', None)",
+      "remediation_steps": [
+        "Remove hardcoded API key from source code",
+        "Store API key in environment variables or secret management system (e.g., AWS Secrets Manager, HashiCorp Vault)",
+        "Rotate the exposed API key immediately",
+        "Implement API key validation and logging",
+        "Use principle of least privilege for API key permissions"
+      ]
+    },
+    {
+      "id": "VULN-002",
+      "severity": "CRITICAL",
+      "category": "SQL Injection",
+      "title": "SQL Injection via String Formatting",
+      "description": "User input is directly concatenated into SQL query using string formatting, allowing arbitrary SQL code execution.",
+      "file": "input.py",
+      "line_numbers": [12, 13, 14, 15, 16],
+      "vulnerable_code": "sql = \"SELECT id, username FROM users WHERE username LIKE '%{}%'\".format(name)\ncur.execute(sql)",
+      "impact": "Complete database compromise, unauthorized data access, data manipulation, data deletion, and potential server takeover.",
+      "cwe": "CWE-89: SQL Injection",
+      "cvss_score": 9.9,
+      "fix_explanation": "Replaced string formatting with parameterized queries. The secure version uses SQL placeholders (?) and passes parameters separately to cur.execute(). This ensures user input is treated as data, not executable SQL code.",
+      "secure_replacement": "sql = \"SELECT id, username FROM users WHERE username LIKE ?\"\ncur.execute(sql, ('%' + name + '%',))",
+      "remediation_steps": [
+        "Replace all string concatenation/formatting in SQL with parameterized queries",
+        "Use ORM frameworks (e.g., SQLAlchemy) that provide built-in SQL injection protection",
+        "Implement input validation and sanitization",
+        "Apply principle of least privilege for database accounts",
+        "Enable database query logging and monitoring"
+      ]
+    },
+    {
+      "id": "VULN-003",
+      "severity": "CRITICAL",
+      "category": "Insecure Deserialization",
+      "title": "Pickle Remote Code Execution",
+      "description": "Application deserializes untrusted pickle data from user requests, allowing arbitrary code execution.",
+      "file": "input.py",
+      "line_numbers": [20, 21, 22, 23, 24, 25, 26],
+      "vulnerable_code": "data = request.data\nprofile = pickle.loads(data)",
+      "impact": "Complete server compromise, remote code execution, data theft, malware installation, and lateral movement within network.",
+      "cwe": "CWE-502: Deserialization of Untrusted Data",
+      "cvss_score": 10.0,
+      "fix_explanation": "Replaced pickle.loads() with json.loads() for safe deserialization. JSON is a text-based format that cannot contain executable code. Added validation to ensure the deserialized data is a dictionary and that fields meet expected constraints (type checking, length limits).",
+      "secure_replacement": "data = request.data\nprofile = json.loads(data)\nif not isinstance(profile, dict):\n    return jsonify({\"status\": \"error\", \"message\": \"Invalid profile format\"}), 400",
+      "remediation_steps": [
+        "Replace pickle with safe serialization formats (JSON, YAML with safe loader)",
+        "Never deserialize data from untrusted sources",
+        "Implement strict input validation and type checking",
+        "Use digital signatures to verify data integrity if complex objects are required",
+        "Consider using Protocol Buffers or MessagePack for structured data"
+      ]
+    },
+    {
+      "id": "VULN-004",
+      "severity": "CRITICAL",
+      "category": "Command Injection",
+      "title": "OS Command Injection",
+      "description": "User input is concatenated directly into shell command execution, allowing arbitrary command execution.",
+      "file": "input.py",
+      "line_numbers": [29, 30, 31, 32, 33, 34],
+      "vulnerable_code": "cmd = request.form.get('cmd', '')\nos.system(\"echo Running: \" + cmd)",
+      "impact": "Complete server compromise, arbitrary command execution, data exfiltration, system destruction, and privilege escalation.",
+      "cwe": "CWE-78: OS Command Injection",
+      "cvss_score": 10.0,
+      "fix_explanation": "Removed os.system() entirely and replaced with a whitelist approach. The secure version only allows predefined safe commands from a dictionary. If command execution is truly needed, use subprocess module with shell=False and input validation.",
+      "secure_replacement": "allowed_commands = {\n    'status': lambda: 'System status: OK',\n    'info': lambda: 'System info available',\n}\nif cmd in allowed_commands:\n    result = allowed_commands[cmd]()\n    return jsonify({\"status\": \"ok\", \"result\": result})",
+      "remediation_steps": [
+        "Avoid shell command execution with user input entirely",
+        "Use whitelist of allowed operations instead of arbitrary commands",
+        "If commands are necessary, use subprocess with shell=False and argument lists",
+        "Implement strict input validation with regular expressions",
+        "Run application with minimal privileges (non-root user)",
+        "Use containerization to limit blast radius"
+      ]
+    },
+    {
+      "id": "VULN-005",
+      "severity": "CRITICAL",
+      "category": "Server-Side Template Injection (SSTI)",
+      "title": "Template Injection via render_template_string",
+      "description": "User input is directly embedded in template string without escaping, allowing server-side template injection and code execution.",
+      "file": "input.py",
+      "line_numbers": [37, 38, 39, 40, 41, 42],
+      "vulnerable_code": "name = request.args.get('name', 'guest')\ntemplate = \"<h1>Hello %s</h1>\" % name\nreturn render_template_string(template)",
+      "impact": "Remote code execution, file system access, sensitive data disclosure, and complete server compromise.",
+      "cwe": "CWE-94: Improper Control of Generation of Code",
+      "cvss_score": 9.8,
+      "fix_explanation": "Replaced direct string interpolation with Jinja2 template variables. The secure version sanitizes input by removing HTML/script tags, limits input length, and uses Jinja2's autoescaping ({{ name }}) which automatically escapes dangerous characters. This prevents template injection while maintaining functionality.",
+      "secure_replacement": "name = request.args.get('name', 'guest')\nname = re.sub(r'[<>]', '', name)[:50]\ntemplate = \"<h1>Hello {{ name }}</h1>\"\nreturn render_template_string(template, name=name)",
+      "remediation_steps": [
+        "Never concatenate user input directly into templates",
+        "Use template variables with autoescaping enabled",
+        "Sanitize and validate all user input",
+        "Prefer static templates loaded from files over render_template_string",
+        "Implement Content Security Policy (CSP) headers",
+        "Use template sandboxing features"
+      ]
+    },
+    {
+      "id": "VULN-006",
+      "severity": "HIGH",
+      "category": "Hardcoded Credentials",
+      "title": "Plaintext Password Storage",
+      "description": "User passwords are stored in plaintext in source code, violating security best practices.",
+      "file": "input.py",
+      "line_numbers": [45, 46, 51, 52, 53, 54, 55],
+      "vulnerable_code": "USERS = {\n    \"alice\": {\"password\": \"password123\"},\n}\nif user and user.get(\"password\") == password:",
+      "impact": "Password compromise, unauthorized access, credential theft, and violation of data protection regulations.",
+      "cwe": "CWE-259: Use of Hard-coded Password",
+      "cvss_score": 7.5,
+      "fix_explanation": "Replaced plaintext passwords with password hashes using Werkzeug's password hashing functions (PBKDF2-SHA256 by default). The secure version uses generate_password_hash() to create secure password hashes and check_password_hash() for verification. In production, passwords should be loaded from a secure database, never hardcoded.",
+      "secure_replacement": "from werkzeug.security import check_password_hash, generate_password_hash\n\nUSERS = {\n    \"alice\": {\n        \"password_hash\": generate_password_hash(\"SecurePassword123!\")\n    },\n}\nif user and check_password_hash(user.get(\"password_hash\"), password):",
+      "remediation_steps": [
+        "Use strong password hashing algorithms (bcrypt, Argon2, PBKDF2)",
+        "Never store passwords in plaintext",
+        "Move user credentials to secure database",
+        "Implement password complexity requirements",
+        "Add rate limiting and account lockout for login attempts",
+        "Use multi-factor authentication (MFA)",
+        "Implement secure session management"
+      ]
+    },
+    {
+      "id": "VULN-007",
+      "severity": "MEDIUM",
+      "category": "Information Disclosure",
+      "title": "Debug Mode Enabled in Production",
+      "description": "Flask application runs with debug=True, exposing sensitive debugging information and enabling code execution via debugger PIN.",
+      "file": "input.py",
+      "line_numbers": [57],
+      "vulnerable_code": "app.run(debug=True)",
+      "impact": "Information disclosure, stack trace exposure, potential code execution, and easier exploitation of other vulnerabilities.",
+      "cwe": "CWE-489: Active Debug Code",
+      "cvss_score": 6.5,
+      "fix_explanation": "Made debug mode configurable via environment variable (FLASK_DEBUG) and defaults to False. The secure version only enables debug mode when explicitly set in environment, preventing accidental production exposure. Also added host and port restrictions.",
+      "secure_replacement": "debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'\napp.run(debug=debug_mode, host='127.0.0.1', port=5000)",
+      "remediation_steps": [
+        "Disable debug mode in production environments",
+        "Use environment variables for configuration",
+        "Implement proper logging instead of debug output",
+        "Use production WSGI servers (Gunicorn, uWSGI) instead of Flask development server",
+        "Configure error pages that don't expose stack traces",
+        "Implement centralized error monitoring"
+      ]
+    }
+  ],
+  "security_recommendations": [
+    "Implement comprehensive input validation across all endpoints",
+    "Add authentication and authorization middleware",
+    "Enable HTTPS/TLS for all connections",
+    "Implement rate limiting to prevent abuse",
+    "Add comprehensive logging and monitoring",
+    "Use a Web Application Firewall (WAF)",
+    "Implement Content Security Policy (CSP) headers",
+    "Regular security audits and penetration testing",
+    "Keep all dependencies updated",
+    "Use security linters (Bandit, Safety) in CI/CD pipeline"
+  ],
+  "compliance_notes": {
+    "GDPR": "Password storage violated GDPR Article 32 (Security of Processing)",
+    "PCI-DSS": "Multiple violations if handling payment data",
+    "OWASP_Top_10": "Violations found: A03:2021-Injection, A05:2021-Security Misconfiguration, A08:2021-Software and Data Integrity Failures"
+  }
+}
