@@ -1,0 +1,146 @@
+{
+  "audit_report": {
+    "application": "Flask Application Security Audit",
+    "date": "2025-11-25",
+    "file_audited": "input.py",
+    "total_vulnerabilities": 7,
+    "vulnerabilities": [
+      {
+        "id": "VULN-001",
+        "type": "SQL Injection",
+        "severity": "CRITICAL",
+        "file": "input.py",
+        "line_numbers": "13-16",
+        "affected_code": "sql = \"SELECT id, username FROM users WHERE username LIKE '%{}%'\".format(name)",
+        "description": "Direct string formatting is used to construct SQL queries with user input, allowing attackers to inject arbitrary SQL commands. An attacker could extract sensitive data, modify database contents, or execute administrative operations.",
+        "attack_example": "name=' OR '1'='1' UNION SELECT password, username FROM users--",
+        "cwe": "CWE-89: SQL Injection",
+        "cvss_score": 9.8,
+        "fix_explanation": "Replace string formatting with parameterized queries using placeholders. This ensures user input is treated as data, not executable SQL code. The database driver will properly escape and handle the input.",
+        "secure_replacement": "sql = \"SELECT id, username FROM users WHERE username LIKE ?\"\ncur.execute(sql, ('%' + name + '%',))"
+      },
+      {
+        "id": "VULN-002",
+        "type": "Insecure Deserialization (Remote Code Execution)",
+        "severity": "CRITICAL",
+        "file": "input.py",
+        "line_numbers": "21-27",
+        "affected_code": "profile = pickle.loads(data)",
+        "description": "The application uses pickle.loads() to deserialize untrusted user input. Pickle can execute arbitrary Python code during deserialization, allowing attackers to achieve remote code execution on the server.",
+        "attack_example": "Attacker sends malicious pickled data that executes system commands or installs backdoors",
+        "cwe": "CWE-502: Deserialization of Untrusted Data",
+        "cvss_score": 10.0,
+        "fix_explanation": "Replace pickle with safe serialization formats like JSON. JSON only handles basic data types and cannot execute arbitrary code. Add input validation to ensure only expected fields are present.",
+        "secure_replacement": "import json\ntry:\n    profile = json.loads(data.decode('utf-8'))\n    if not isinstance(profile, dict):\n        return jsonify({\"error\": \"Invalid format\"}), 400\nexcept json.JSONDecodeError:\n    return jsonify({\"error\": \"Invalid JSON\"}), 400"
+      },
+      {
+        "id": "VULN-003",
+        "type": "Command Injection",
+        "severity": "CRITICAL",
+        "file": "input.py",
+        "line_numbers": "30-35",
+        "affected_code": "os.system(\"echo Running: \" + cmd)",
+        "description": "User input is directly concatenated into a shell command executed via os.system(). Attackers can inject shell metacharacters to execute arbitrary commands with the application's privileges.",
+        "attack_example": "cmd='; rm -rf / #' or cmd='& whoami' on Windows",
+        "cwe": "CWE-78: OS Command Injection",
+        "cvss_score": 10.0,
+        "fix_explanation": "Never pass user input to shell commands. If command execution is necessary, use subprocess with a list of arguments (not shell=True) and strict input validation. Better yet, avoid executing user-controlled commands entirely. For this case, we'll just log the command safely without executing it.",
+        "secure_replacement": "import logging\nlogger = logging.getLogger(__name__)\n# Validate and sanitize input\nif not cmd or not cmd.replace(' ', '').isalnum():\n    return \"Invalid command\", 400\nlogger.info(f\"Command request received: {cmd}\")\nreturn \"Command logged\""
+      },
+      {
+        "id": "VULN-004",
+        "type": "Server-Side Template Injection (SSTI)",
+        "severity": "CRITICAL",
+        "file": "input.py",
+        "line_numbers": "38-43",
+        "affected_code": "template = \"<h1>Hello %s</h1>\" % name\nreturn render_template_string(template)",
+        "description": "User input is directly inserted into a template string and rendered via render_template_string(). Attackers can inject Jinja2 template syntax to execute arbitrary Python code on the server.",
+        "attack_example": "name={{config.__class__.__init__.__globals__['os'].popen('whoami').read()}}",
+        "cwe": "CWE-94: Improper Control of Generation of Code",
+        "cvss_score": 9.8,
+        "fix_explanation": "Never insert user input directly into templates. Use Jinja2's variable substitution with autoescaping enabled, or return HTML with proper escaping. Flask's render_template_string with proper variable passing automatically escapes output.",
+        "secure_replacement": "from markupsafe import escape\nname = escape(request.args.get('name', 'guest'))\ntemplate = \"<h1>Hello {{ name }}</h1>\"\nreturn render_template_string(template, name=name)"
+      },
+      {
+        "id": "VULN-005",
+        "type": "Hardcoded API Key / Secret Exposure",
+        "severity": "HIGH",
+        "file": "input.py",
+        "line_numbers": "9",
+        "affected_code": "API_KEY = \"AKIA_EXAMPLE_HARDCODED_KEY_123456\"",
+        "description": "Sensitive API key is hardcoded in source code. If the code is committed to version control or accessed by unauthorized users, the key is compromised. This appears to be an AWS-format key which could grant access to cloud resources.",
+        "attack_example": "Attacker gains repository access and uses the key to access AWS services",
+        "cwe": "CWE-798: Use of Hard-coded Credentials",
+        "cvss_score": 7.5,
+        "fix_explanation": "Store secrets in environment variables or secure secret management systems (AWS Secrets Manager, HashiCorp Vault, etc.). Load them at runtime. Use .env files for local development (never committed to version control).",
+        "secure_replacement": "import os\nAPI_KEY = os.environ.get('API_KEY')\nif not API_KEY:\n    raise ValueError(\"API_KEY environment variable not set\")"
+      },
+      {
+        "id": "VULN-006",
+        "type": "Weak Password Storage / Hardcoded Credentials",
+        "severity": "HIGH",
+        "file": "input.py",
+        "line_numbers": "46-47",
+        "affected_code": "USERS = {\n    \"alice\": {\"password\": \"password123\"},\n}",
+        "description": "Passwords are stored in plaintext and hardcoded in source code. Plaintext passwords can be easily compromised if the code or database is accessed. The password is also weak and predictable.",
+        "attack_example": "Anyone with code access can see all passwords; weak passwords are easily cracked",
+        "cwe": "CWE-259: Use of Hard-coded Password, CWE-916: Use of Password Hash With Insufficient Computational Effort",
+        "cvss_score": 7.5,
+        "fix_explanation": "Use secure password hashing (bcrypt, argon2, or PBKDF2). Store hashed passwords in a database, not in code. Implement password complexity requirements. For demonstration, using werkzeug's security functions.",
+        "secure_replacement": "from werkzeug.security import generate_password_hash, check_password_hash\n# Passwords should be hashed and stored in database\nUSERS = {\n    \"alice\": {\"password_hash\": generate_password_hash(\"password123\")},\n}\n# In login function, use: check_password_hash(user['password_hash'], password)"
+      },
+      {
+        "id": "VULN-007",
+        "type": "Debug Mode Enabled in Production",
+        "severity": "MEDIUM",
+        "file": "input.py",
+        "line_numbers": "57",
+        "affected_code": "app.run(debug=True)",
+        "description": "Flask debug mode is enabled, which exposes an interactive debugger and detailed error messages. In production, this reveals sensitive information about the application structure, source code, and can allow code execution via the debugger PIN.",
+        "attack_example": "Attacker triggers errors to view source code and variables; may attempt to access debugger console",
+        "cwe": "CWE-489: Active Debug Code",
+        "cvss_score": 5.3,
+        "fix_explanation": "Disable debug mode in production. Use environment variables to control debug settings. Implement proper logging and error handling instead of relying on debug output.",
+        "secure_replacement": "if __name__ == '__main__':\n    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'\n    app.run(debug=debug_mode, host='127.0.0.1')"
+      }
+    ],
+    "summary": {
+      "critical_vulnerabilities": 4,
+      "high_vulnerabilities": 2,
+      "medium_vulnerabilities": 1,
+      "low_vulnerabilities": 0,
+      "hardcoded_secrets": 2,
+      "recommendation": "All critical vulnerabilities must be addressed immediately as they allow remote code execution and data exfiltration. High severity issues should be fixed before deployment. Implement security best practices including input validation, output encoding, secure configuration management, and principle of least privilege."
+    },
+    "additional_recommendations": [
+      {
+        "category": "Input Validation",
+        "recommendation": "Implement comprehensive input validation for all user inputs using allow-lists and type checking"
+      },
+      {
+        "category": "Security Headers",
+        "recommendation": "Add security headers (Content-Security-Policy, X-Frame-Options, X-Content-Type-Options, etc.)"
+      },
+      {
+        "category": "Rate Limiting",
+        "recommendation": "Implement rate limiting on all endpoints, especially authentication endpoints"
+      },
+      {
+        "category": "HTTPS",
+        "recommendation": "Always use HTTPS in production; implement HSTS"
+      },
+      {
+        "category": "Authentication",
+        "recommendation": "Implement proper session management, use secure cookies with httponly and secure flags"
+      },
+      {
+        "category": "Logging and Monitoring",
+        "recommendation": "Implement security event logging and monitoring for suspicious activities"
+      },
+      {
+        "category": "Dependency Management",
+        "recommendation": "Regularly update dependencies and scan for known vulnerabilities using tools like safety or snyk"
+      }
+    ]
+  }
+}
